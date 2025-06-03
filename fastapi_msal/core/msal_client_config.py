@@ -85,9 +85,6 @@ class MSALClientConfig(BaseSettings):
             return authority_url
         
         if MSALPolicies.EXTERNAL_ID == self.policy:
-            if not self.external_user_flow_endpoint:
-                msg = "External user flow endpoint must be set for EXTERNAL_ID policy"
-                raise ValueError(msg)
             scopes = "%20".join(self.scopes) if self.scopes else "openid"
             response_type = "%20".join(self.external_id_response_type)
             authority_url = f"https://{self.tenant}.ciamlogin.com/{self.tenant}.onmicrosoft.com/oauth2/v2.0/authorize?client_id={self.client_id}&response_type={response_type}&scope={scopes}&prompt={self.external_id_prompt}"
