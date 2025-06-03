@@ -21,6 +21,11 @@ class MSALPolicies(str, Enum):
     # Sign in users with work and school accounts or personal Microsoft accounts.
     AAD_MULTI = "AAD_MULTI"
 
+    # Sign in users of a specific organization only, with B2C policies.
+    EXTERNAL_ID = "EXTERNAL_ID"
+    # B2C or EXTERNAL ID?
+    # https://learn.microsoft.com/en-us/answers/questions/1556632/confusion-around-azure-ad-b2c-vs-microsoft-entra-e
+
     # The below are predefined B2C policies,
     # if you are using a custom policy, set the b2c_policy in the config
     B2C_LOGIN = "B2C_1_LOGIN"
@@ -37,6 +42,11 @@ class MSALClientConfig(BaseSettings):
 
     # Optional to set, default is single AAD (B2B)
     policy: MSALPolicies = MSALPolicies.AAD_SINGLE
+
+    # EXTERNAL_ID policy specific params
+    external_id_response_type: list[str] = ["id_token", "token"]
+    external_id_prompt: OptStr = "login"
+
     # added to resolve issue with B2C custom policies [issue #32]
     b2c_policy: OptStr = None
 
@@ -72,6 +82,15 @@ class MSALClientConfig(BaseSettings):
 
         if MSALPolicies.AAD_MULTI == self.policy:
             authority_url = "https://login.microsoftonline.com/common/"
+            return authority_url
+        
+        if MSALPolicies.EXTERNAL_ID == self.policy:
+            if not self.external_user_flow_endpoint:
+                msg = "External user flow endpoint must be set for EXTERNAL_ID policy"
+                raise ValueError(msg)
+            scopes = "%20".join(self.scopes) if self.scopes else "openid"
+            response_type = "%20".join(self.external_id_response_type)
+            authority_url = f"https://{self.tenant}.ciamlogin.com/{self.tenant}.onmicrosoft.com/oauth2/v2.0/authorize?client_id={self.client_id}&response_type={response_type}&scope={scopes}&prompt={self.external_id_prompt}"
             return authority_url
 
         # Assume B2C policy, specific policy need to be set by user (predefined added B2C_LOGIN, B2C_PROFILE, B2C_CUSTOM)
